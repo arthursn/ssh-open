@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Drop this in a directory that takes priority in PATH on the remote machine
+# e.g., ~/.local/bin/xdg-open
+
+URL="$1"
+
+if [ -z "$URL" ]; then
+    echo "Usage: xdg-open <url>" >&2
+    exit 1
+fi
+
+echo "{\"url\": \"$URL\", \"version\": 1}" | nc -q1 localhost 9999
