@@ -1,0 +1,18 @@
+[project]
+name = "ssh-open"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [{ name = "Arthur Nishikawa", email = "nishikawa.poli@gmail.com" }]
+requires-python = ">=3.14"
+dependencies = []
+
+[project.scripts]
+ssh-listener = "ssh_open.listener:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.ruff.lint]
+ignore = ["S110", "BLE"]

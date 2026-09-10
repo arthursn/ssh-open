@@ -6,7 +6,7 @@ import tomllib
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
-from common.protocol import DEFAULT_PORT, OpenRequest, OpenResponse
+from ..common.protocol import DEFAULT_PORT, OpenRequest, OpenResponse
 
 logging.basicConfig(
     level=logging.INFO,
@@ -48,6 +48,7 @@ def open_url_on_host(url: str) -> None:
     """Open a URL using the host OS default browser."""
     if sys.platform == "win32":
         import os
+
         os.startfile(url)
     elif sys.platform == "darwin":
         subprocess.Popen(["open", url])
@@ -67,16 +68,15 @@ class TunnelManager:
             log.info(f"Port {port} already forwarded, resetting timer.")
             self._tunnels[port].cancel()
 
-        self._tunnels[port] = asyncio.create_task(
-            self._tunnel_with_timeout(port)
-        )
+        self._tunnels[port] = asyncio.create_task(self._tunnel_with_timeout(port))
 
     async def _tunnel_with_timeout(self, port: int) -> None:
         log.info(f"Opening forward tunnel for port {port} (timeout: {self.timeout}s)")
         proc = await asyncio.create_subprocess_exec(
             "ssh",
-            "-N",                            # no remote command
-            "-L", f"{port}:localhost:{port}",
+            "-N",  # no remote command
+            "-L",
+            f"{port}:localhost:{port}",
             self.ssh_host,
             stdout=asyncio.subprocess.DEVNULL,
             stderr=asyncio.subprocess.DEVNULL,
