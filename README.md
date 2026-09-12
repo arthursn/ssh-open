@@ -43,20 +43,6 @@ port = 9999
 timeout_seconds = 30
 ```
 
-## Remote setup (one-time)
-
-### Git Credential Manager (OAuth)
-
-To make GCM use the host browser for OAuth flows, configure it to mimic a VS Code terminal environment. Add the following to your shell rc file on the remote (e.g. `~/.zshrc`, `~/.bashrc`):
-
-```bash
-export VSCODE_IPC_HOOK_CLI=1
-unset DISPLAY
-unset WAYLAND_DISPLAY
-```
-
-This causes GCM to use `xdg-open` (and thus `BROWSER`) for OAuth flows instead of trying to open a GUI browser directly.
-
 ## Requirements
 
 - Python 3.11+
