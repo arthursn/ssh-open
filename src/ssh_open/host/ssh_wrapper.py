@@ -127,7 +127,7 @@ def main() -> None:
     push_assets(ssh_host, ssh_extra)
     cmd = build_ssh_command(ssh_host, ssh_extra)
     log.info(f"Connecting to {ssh_host}...")
-    subprocess.run(cmd, check=True)
+    subprocess.run(cmd, check=False)
 
 
 if __name__ == "__main__":
