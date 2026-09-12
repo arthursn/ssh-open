@@ -47,17 +47,15 @@ timeout_seconds = 30
 
 ### Git Credential Manager (OAuth)
 
-To make GCM use the host browser for OAuth flows, install the provided `gcm_wrapper` asset:
+To make GCM use the host browser for OAuth flows, configure it to mimic a VS Code terminal environment. Add the following to your shell rc file on the remote (e.g. `~/.zshrc`, `~/.bashrc`):
 
 ```bash
-# On the remote machine
-mkdir -p ~/.ssh_open
-# Copy gcm_wrapper from the package assets to ~/.ssh_open/gcm_wrapper
-chmod +x ~/.ssh_open/gcm_wrapper
-git config --global credential.helper ~/.ssh_open/gcm_wrapper
+export VSCODE_IPC_HOOK_CLI=1
+unset DISPLAY
+unset WAYLAND_DISPLAY
 ```
 
-The `gcm_wrapper` script sets the necessary environment variables to make GCM behave as if it's running inside a VS Code terminal, causing it to use `xdg-open` (and thus `BROWSER`) for OAuth flows.
+This causes GCM to use `xdg-open` (and thus `BROWSER`) for OAuth flows instead of trying to open a GUI browser directly.
 
 ## Requirements
 
