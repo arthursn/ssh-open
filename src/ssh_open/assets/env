@@ -1,2 +1,5 @@
 export BROWSER=~/.ssh_open/browser
 export VSCODE_IPC_HOOK_CLI=1
+unset DISPLAY 2>/dev/null || true
+unset WAYLAND_DISPLAY 2>/dev/null || true
+unset SSH_TTY 2>/dev/null || true
