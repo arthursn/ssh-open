@@ -1,0 +1,12 @@
+# https://www.aleksandrhovhannisyan.com/blog/crlf-vs-lf-normalizing-line-endings-in-git/
+
+# All files are checked into the repo with LF
+* text=auto
+
+# These files are checked out using CRLF locally
+*.bat eol=crlf
+
+# These files are checked out using LF locally
+src/ssh_open/assets/browser eol=lf
+src/ssh_open/assets/gcm_wrapper eol=lf
+src/ssh_open/assets/env eol=lf
