@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Wraps git-credential-manager to mimic a VS Code terminal environment,
+# which causes GCM to use xdg-open (and thus BROWSER) for OAuth flows.
+#
+# Setup (run once on the remote):
+#   chmod +x ~/.ssh_open/gcm_wrapper
+#   git config --global credential.helper ~/.ssh_open/gcm_wrapper
+
+export VSCODE_IPC_HOOK_CLI=1
+unset DISPLAY
+unset WAYLAND_DISPLAY
+
+exec git-credential-manager "$@"

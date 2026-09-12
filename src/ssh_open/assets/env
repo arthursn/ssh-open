@@ -1,0 +1,2 @@
+export BROWSER=~/.ssh_open/browser
+export VSCODE_IPC_HOOK_CLI=1

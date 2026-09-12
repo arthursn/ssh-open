@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Sent to remote by ssh_wrapper. Opens URLs on the host via the ssh-open listener.
+
+URL="$1"
+
+if [ -z "$URL" ]; then
+    echo "Usage: browser <url>" >&2
+    exit 1
+fi
+
+echo "{\"url\": \"$URL\", \"version\": 1}" | nc -q1 localhost 9999
