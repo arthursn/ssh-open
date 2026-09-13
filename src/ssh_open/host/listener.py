@@ -77,9 +77,9 @@ class TunnelManager:
             "-N",  # no remote command
             "-L",
             f"{port}:localhost:{port}",
-            self.ssh_host,
-            stdout=asyncio.subprocess.DEVNULL,
-            stderr=asyncio.subprocess.DEVNULL,
+            "p510",
+            # stdout=asyncio.subprocess.DEVNULL,
+            # stderr=asyncio.subprocess.DEVNULL,
         )
         try:
             await asyncio.wait_for(proc.wait(), timeout=self.timeout)
@@ -95,11 +95,15 @@ class TunnelManager:
 
 
 class Listener:
-    def __init__(self, config: dict):
-        tunnel_cfg = config.get("tunnel", {})
-        self.timeout: int = tunnel_cfg.get("timeout_seconds", 30)
-        self.host: str = config.get("ssh", {}).get("host", "")
-        self.port: int = config.get("listener", {}).get("port", DEFAULT_PORT)
+    def __init__(
+        self,
+        host: str,
+        port: int = DEFAULT_PORT,
+        timeout: int = 30,
+    ):
+        self.host: str = host
+        self.port: int = port
+        self.timeout: int = timeout
         self.tunnel_manager = TunnelManager(self.timeout, self.host)
 
     async def handle_client(
@@ -148,13 +152,3 @@ class Listener:
         log.info(f"Listening on {addrs}")
         async with server:
             await server.serve_forever()
-
-
-def main():
-    config = load_config()
-    listener = Listener(config)
-    asyncio.run(listener.run())
-
-
-if __name__ == "__main__":
-    main()

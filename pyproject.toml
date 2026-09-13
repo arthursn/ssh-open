@@ -9,7 +9,6 @@ dependencies = []
 
 [project.scripts]
 ssh-open = "ssh_open.host.ssh_wrapper:main"
-ssh-open-listener = "ssh_open.host.listener:main"
 
 [build-system]
 requires = ["hatchling"]

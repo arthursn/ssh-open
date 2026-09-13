@@ -1,11 +1,12 @@
+import asyncio
 import importlib.resources
 import logging
 import socket
 import subprocess
 import sys
-import threading
-import time
 from pathlib import Path
+
+from .listener import Listener
 
 log = logging.getLogger(__name__)
 
@@ -25,24 +26,6 @@ def is_listener_running(port: int = LISTENER_PORT) -> bool:
             return True
     except OSError:
         return False
-
-
-def start_listener() -> threading.Thread:
-    """Start the listener in a background daemon thread."""
-    from ssh_open.host.listener import main as listener_main
-
-    log.info("Starting ssh-open listener...")
-    thread = threading.Thread(target=listener_main, daemon=True)
-    thread.start()
-
-    for _ in range(10):
-        time.sleep(0.3)
-        if is_listener_running():
-            log.info("Listener is up.")
-            return thread
-
-    log.warning("Listener may not have started in time.")
-    return thread
 
 
 def get_asset(name: str) -> Path:
@@ -106,7 +89,7 @@ def build_ssh_command(ssh_host: str, extra_args: list[str]) -> list[str]:
     ]
 
 
-def main() -> None:
+async def run() -> None:
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(message)s",
@@ -121,14 +104,25 @@ def main() -> None:
     ssh_host = args[-1]
     ssh_extra = args[:-1]
 
+    listener = Listener(host=ssh_host)
+
     if not is_listener_running():
-        start_listener()
+        asyncio.create_task(listener.run())
+        for _ in range(10):
+            await asyncio.sleep(0.3)
+            if is_listener_running():
+                log.info("Listener is up.")
+                break
+        else:
+            log.warning("Listener may not have started inn time.")
 
     push_assets(ssh_host, ssh_extra)
     cmd = build_ssh_command(ssh_host, ssh_extra)
     log.info(f"Connecting to {ssh_host}...")
-    subprocess.run(cmd, check=False)
+
+    proc = await asyncio.create_subprocess_exec(*cmd)
+    await proc.wait()
 
 
-if __name__ == "__main__":
-    main()
+def main() -> None:
+    asyncio.run(run())
