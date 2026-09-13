@@ -28,21 +28,6 @@ ssh-open user@remote-host
 ssh-open -p 2222 user@remote-host
 ```
 
-## Configuration
-
-Edit `config.toml`:
-
-```toml
-[ssh]
-host = "user@remote-host"
-
-[listener]
-port = 9999
-
-[tunnel]
-timeout_seconds = 30
-```
-
 ## Requirements
 
 - Python 3.11+

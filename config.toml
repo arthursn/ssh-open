@@ -1,8 +1,0 @@
-[ssh]
-host = "user@remote-host"   # used for forward tunnels
-
-[listener]
-port = 9999
-
-[tunnel]
-timeout_seconds = 30

@@ -2,8 +2,6 @@ import asyncio
 import logging
 import subprocess
 import sys
-import tomllib
-from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 from .protocol import DEFAULT_PORT, OpenRequest, OpenResponse
@@ -13,14 +11,6 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(message)s",
 )
 log = logging.getLogger(__name__)
-
-
-def load_config() -> dict:
-    config_path = Path(__file__).parent.parent / "config.toml"
-    if config_path.exists():
-        with open(config_path, "rb") as f:
-            return tomllib.load(f)
-    return {}
 
 
 def extract_localhost_ports(url: str) -> list[int]:
