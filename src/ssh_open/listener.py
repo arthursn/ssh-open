@@ -6,7 +6,7 @@ import tomllib
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
-from ..common.protocol import DEFAULT_PORT, OpenRequest, OpenResponse
+from .protocol import DEFAULT_PORT, OpenRequest, OpenResponse
 
 logging.basicConfig(
     level=logging.INFO,
