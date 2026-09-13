@@ -67,7 +67,7 @@ class TunnelManager:
             "-N",  # no remote command
             "-L",
             f"{port}:localhost:{port}",
-            "p510",
+            self.ssh_host,
             # stdout=asyncio.subprocess.DEVNULL,
             # stderr=asyncio.subprocess.DEVNULL,
         )
