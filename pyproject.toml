@@ -8,7 +8,7 @@ requires-python = ">=3.14"
 dependencies = []
 
 [project.scripts]
-ssh-open = "ssh_open.ssh_wrapper:main"
+ssho = "ssh_open.ssh_wrapper:main"
 
 [build-system]
 requires = ["hatchling"]

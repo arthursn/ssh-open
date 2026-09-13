@@ -21,11 +21,11 @@ pip install ssh-open
 
 ## Usage
 
-Use `ssh-open` as a drop-in replacement for `ssh`:
+Use `ssho` as a drop-in replacement for `ssh`:
 
 ```bash
-ssh-open user@remote-host
-ssh-open -p 2222 user@remote-host
+ssho user@remote-host
+ssho -p 2222 user@remote-host
 ```
 
 ## Requirements
