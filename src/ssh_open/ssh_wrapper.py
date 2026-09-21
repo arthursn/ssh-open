@@ -14,9 +14,9 @@ from .listener import Listener
 log = logging.getLogger(__name__)
 
 # used for ssh commands (~ expanded by remote shell)
-REMOTE_SSH_OPEN_DIR = "~/.ssh_open"
+REMOTE_SSH_OPEN_DIR = "~/.ssh-open"
 # used in bootstrap (expanded by remote shell)
-REMOTE_SSH_OPEN_DIR_SH = "$HOME/.ssh_open"
+REMOTE_SSH_OPEN_DIR_SH = "$HOME/.ssh-open"
 REMOTE_BROWSER_PATH = f"{REMOTE_SSH_OPEN_DIR}/browser"
 REMOTE_ENV_PATH_SH = f"{REMOTE_SSH_OPEN_DIR_SH}/env"
 
