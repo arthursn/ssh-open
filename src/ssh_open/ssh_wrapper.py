@@ -1,9 +1,9 @@
+import argparse
 import asyncio
 import importlib.resources
 import logging
 import socket
 import subprocess
-import sys
 from pathlib import Path
 
 from .listener import Listener
@@ -91,22 +91,18 @@ def build_ssh_command(ssh_host: str, extra_args: list[str]) -> list[str]:
     ]
 
 
-async def run() -> None:
+async def run(
+    ssh_host: str,
+    ssh_extra: list[str],
+    timeout: int = 30,
+    push: bool = True,
+) -> None:
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(message)s",
     )
 
-    args = sys.argv[1:]
-    if not args:
-        print("Usage: ssh-open [ssh-options] <host>", file=sys.stderr)
-        sys.exit(1)
-
-    # The host is the last non-option argument (simple heuristic)
-    ssh_host = args[-1]
-    ssh_extra = args[:-1]
-
-    listener = Listener(host=ssh_host)
+    listener = Listener(host=ssh_host, timeout=timeout)
 
     if not is_listener_running():
         asyncio.create_task(listener.run())
@@ -118,7 +114,8 @@ async def run() -> None:
         else:
             log.warning("Listener may not have started in time.")
 
-    push_assets(ssh_host, ssh_extra)
+    if push:
+        push_assets(ssh_host, ssh_extra)
     cmd = build_ssh_command(ssh_host, ssh_extra)
     log.info(f"Connecting to {ssh_host}...")
 
@@ -126,4 +123,29 @@ async def run() -> None:
 
 
 def main() -> None:
-    asyncio.run(run())
+    parser = argparse.ArgumentParser(
+        prog="ssh-open",
+        description="Open a browser on the local host from a remote SSH session.",
+    )
+    parser.add_argument("host", help="SSH host to connect to")
+    parser.add_argument(
+        "--timeout",
+        type=int,
+        default=30,
+        help="Tunnel idle timeout in seconds (default: 30)",
+    )
+    parser.add_argument(
+        "--no-push",
+        action="store_true",
+        help="Skip pushing assets to the remote host",
+    )
+    our_args, ssh_extra = parser.parse_known_args()
+
+    asyncio.run(
+        run(
+            our_args.host,
+            ssh_extra,
+            timeout=our_args.timeout,
+            push=not our_args.no_push,
+        )
+    )
