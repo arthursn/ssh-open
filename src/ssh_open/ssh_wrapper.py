@@ -52,11 +52,13 @@ def push_assets(ssh_host: str, ssh_args: list[str]) -> None:
                 stdin=f,
                 check=True,
             )
+        log.info(f"Transferred asset '{asset_name}' to {ssh_host}:{remote_path}")
 
     subprocess.run(
         ["ssh", *ssh_args, ssh_host, f"chmod +x {REMOTE_BROWSER_PATH}"],
         check=True,
     )
+    log.info("Assets successfully pushed and permissions set.")
 
 
 def build_ssh_command(ssh_host: str, extra_args: list[str]) -> list[str]:
@@ -120,8 +122,7 @@ async def run() -> None:
     cmd = build_ssh_command(ssh_host, ssh_extra)
     log.info(f"Connecting to {ssh_host}...")
 
-    proc = await asyncio.create_subprocess_exec(*cmd)
-    await proc.wait()
+    subprocess.run(cmd, check=False)  # noqa: ASYNC221
 
 
 def main() -> None:
