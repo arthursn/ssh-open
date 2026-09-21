@@ -116,7 +116,7 @@ async def run() -> None:
                 log.info("Listener is up.")
                 break
         else:
-            log.warning("Listener may not have started inn time.")
+            log.warning("Listener may not have started in time.")
 
     push_assets(ssh_host, ssh_extra)
     cmd = build_ssh_command(ssh_host, ssh_extra)
