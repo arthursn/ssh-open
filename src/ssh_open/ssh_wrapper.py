@@ -119,7 +119,8 @@ async def run(
     cmd = build_ssh_command(ssh_host, ssh_extra)
     log.info(f"Connecting to {ssh_host}...")
 
-    subprocess.run(cmd, check=False)  # noqa: ASYNC221
+    proc = await asyncio.create_subprocess_exec(*cmd)
+    await proc.wait()
 
 
 def main() -> None:
