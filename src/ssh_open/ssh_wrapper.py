@@ -16,10 +16,12 @@ REMOTE_SSH_OPEN_DIR = "~/.ssh_open"
 REMOTE_SSH_OPEN_DIR_SH = "$HOME/.ssh_open"
 REMOTE_BROWSER_PATH = f"{REMOTE_SSH_OPEN_DIR}/browser"
 REMOTE_ENV_PATH_SH = f"{REMOTE_SSH_OPEN_DIR_SH}/env"
-LISTENER_PORT = 9999
+
+DEFAULT_TIMEOUT_SEC = 30
+DEFAULT_LISTENER_PORT = 9999
 
 
-def is_listener_running(port: int = LISTENER_PORT) -> bool:
+def is_listener_running(port: int = DEFAULT_LISTENER_PORT) -> bool:
     """Check if the listener is already running by attempting a connection."""
     try:
         with socket.create_connection(("127.0.0.1", port), timeout=1):
@@ -61,7 +63,11 @@ def push_assets(ssh_host: str, ssh_args: list[str]) -> None:
     log.info("Assets successfully pushed and permissions set.")
 
 
-def build_ssh_command(ssh_host: str, extra_args: list[str]) -> list[str]:
+def build_ssh_command(
+    ssh_host: str,
+    extra_args: list[str],
+    port: int = DEFAULT_LISTENER_PORT,
+) -> list[str]:
     """Build the SSH command with reverse tunnel and shell-agnostic env setup."""
     bootstrap = (
         'REAL_SHELL=$(getent passwd "$USER" | cut -d: -f7 | xargs basename); '
@@ -84,7 +90,7 @@ def build_ssh_command(ssh_host: str, extra_args: list[str]) -> list[str]:
         "ssh",
         "-t",
         "-R",
-        f"{LISTENER_PORT}:localhost:{LISTENER_PORT}",
+        f"{port}:localhost:{port}",
         *extra_args,
         ssh_host,
         bootstrap,
@@ -94,7 +100,8 @@ def build_ssh_command(ssh_host: str, extra_args: list[str]) -> list[str]:
 async def run(
     ssh_host: str,
     ssh_extra: list[str],
-    timeout: int = 30,
+    port: int = DEFAULT_LISTENER_PORT,
+    timeout: int = DEFAULT_TIMEOUT_SEC,
     push: bool = True,
 ) -> None:
     logging.basicConfig(
@@ -102,9 +109,9 @@ async def run(
         format="%(asctime)s [%(levelname)s] %(message)s",
     )
 
-    listener = Listener(host=ssh_host, timeout=timeout)
+    listener = Listener(host=ssh_host, port=port, timeout=timeout)
 
-    if not is_listener_running():
+    if not is_listener_running(port=port):
         asyncio.create_task(listener.run())
         for _ in range(10):
             await asyncio.sleep(0.3)
@@ -116,7 +123,7 @@ async def run(
 
     if push:
         push_assets(ssh_host, ssh_extra)
-    cmd = build_ssh_command(ssh_host, ssh_extra)
+    cmd = build_ssh_command(ssh_host, ssh_extra, port=port)
     log.info(f"Connecting to {ssh_host}...")
 
     proc = await asyncio.create_subprocess_exec(*cmd)
@@ -130,10 +137,16 @@ def main() -> None:
     )
     parser.add_argument("host", help="SSH host to connect to")
     parser.add_argument(
+        "--port",
+        type=int,
+        default=DEFAULT_LISTENER_PORT,
+        help=f"Listener port (default: {DEFAULT_LISTENER_PORT})",
+    )
+    parser.add_argument(
         "--timeout",
         type=int,
-        default=30,
-        help="Tunnel idle timeout in seconds (default: 30)",
+        default=DEFAULT_TIMEOUT_SEC,
+        help=f"Tunnel idle timeout in seconds (default: {DEFAULT_TIMEOUT_SEC})",
     )
     parser.add_argument(
         "--no-push",
@@ -146,6 +159,7 @@ def main() -> None:
         run(
             our_args.host,
             ssh_extra,
+            port=our_args.port,
             timeout=our_args.timeout,
             push=not our_args.no_push,
         )
