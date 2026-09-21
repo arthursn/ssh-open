@@ -6,6 +6,9 @@ import socket
 import subprocess
 from pathlib import Path
 
+import tomli
+from platformdirs import user_config_dir
+
 from .listener import Listener
 
 log = logging.getLogger(__name__)
@@ -19,6 +22,16 @@ REMOTE_ENV_PATH_SH = f"{REMOTE_SSH_OPEN_DIR_SH}/env"
 
 DEFAULT_TIMEOUT_SEC = 30
 DEFAULT_LISTENER_PORT = 9999
+DEFAULT_PUSH = True
+
+
+def load_config() -> dict:
+    """Load config from the user config directory if it exists."""
+    config_path = Path(user_config_dir("ssh-open")) / "config.toml"
+    if config_path.exists():
+        with open(config_path, "rb") as f:
+            return tomli.load(f)
+    return {}
 
 
 def is_listener_running(port: int = DEFAULT_LISTENER_PORT) -> bool:
@@ -131,6 +144,8 @@ async def run(
 
 
 def main() -> None:
+    config = load_config()
+
     parser = argparse.ArgumentParser(
         prog="ssh-open",
         description="Open a browser on the local host from a remote SSH session.",
@@ -139,19 +154,20 @@ def main() -> None:
     parser.add_argument(
         "--port",
         type=int,
-        default=DEFAULT_LISTENER_PORT,
-        help=f"Listener port (default: {DEFAULT_LISTENER_PORT})",
+        default=(default := config.get("port", DEFAULT_LISTENER_PORT)),
+        help=f"Listener port (default: {default})",
     )
     parser.add_argument(
         "--timeout",
         type=int,
-        default=DEFAULT_TIMEOUT_SEC,
-        help=f"Tunnel idle timeout in seconds (default: {DEFAULT_TIMEOUT_SEC})",
+        default=(default := config.get("timeout", DEFAULT_TIMEOUT_SEC)),
+        help=f"Tunnel idle timeout in seconds (default: {default})",
     )
     parser.add_argument(
-        "--no-push",
-        action="store_true",
-        help="Skip pushing assets to the remote host",
+        "--push",
+        action=argparse.BooleanOptionalAction,
+        default=(default := config.get("push", DEFAULT_PUSH)),
+        help=f"Push assets to the remote host (default: {default})",
     )
     our_args, ssh_extra = parser.parse_known_args()
 
@@ -161,6 +177,6 @@ def main() -> None:
             ssh_extra,
             port=our_args.port,
             timeout=our_args.timeout,
-            push=not our_args.no_push,
+            push=our_args.push,
         )
     )

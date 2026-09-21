@@ -16,7 +16,7 @@ class OpenRequest:
         return (json.dumps(asdict(self)) + "\n").encode(ENCODING)
 
     @staticmethod
-    def deserialize(data: bytes) -> OpenRequest:
+    def deserialize(data: bytes) -> "OpenRequest":
         obj = json.loads(data.decode(ENCODING).strip())
         if obj.get("version", 1) != PROTOCOL_VERSION:
             raise ValueError(f"Unsupported protocol version: {obj.get('version')}")
@@ -34,7 +34,7 @@ class OpenResponse:
         return (json.dumps(asdict(self)) + "\n").encode(ENCODING)
 
     @staticmethod
-    def deserialize(data: bytes) -> OpenResponse:
+    def deserialize(data: bytes) -> "OpenResponse":
         obj = json.loads(data.decode(ENCODING).strip())
         return OpenResponse(
             success=obj["success"],
