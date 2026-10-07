@@ -16,7 +16,7 @@ A tool that replicates VS Code's terminal behavior of opening URLs from a remote
 ## Installation
 
 ```bash
-pip install ssh-open
+pip install git+https://github.com/arthursn/ssh-open.git
 ```
 
 ## Usage
