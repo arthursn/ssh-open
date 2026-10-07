@@ -5,10 +5,10 @@ A tool that replicates VS Code's terminal behavior of opening URLs from a remote
 ## How it works
 
 1. `ssh-open` starts a listener on the host (`localhost:9999`)
-2. It pushes a `browser` script to the remote (`~/.ssh_open/browser`)
+2. It pushes a `browser` script to the remote (`~/.ssh-open/browser`)
 3. It connects via SSH with:
    - A reverse tunnel (`-R 9999:localhost:9999`) so the remote can reach the host listener
-   - A shell bootstrap that sets `BROWSER=~/.ssh_open/browser` after init files run
+   - A shell bootstrap that sets `BROWSER=~/.ssh-open/browser` after init files run
 4. When any program on the remote calls `xdg-open <URL>`, the `browser` script sends the URL to the host listener
 5. The host opens the URL in the default browser
 6. If the URL contains `localhost` ports (e.g. OAuth redirects), forward tunnels are opened automatically and closed after a configurable timeout
