@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 authors = [{ name = "Arthur Nishikawa", email = "nishikawa.poli@gmail.com" }]
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = ["platformdirs>=4.11.11", "tomli>=2.4.1"]
 
 [project.scripts]
@@ -16,3 +16,9 @@ build-backend = "hatchling.build"
 
 [tool.setuptools.package-data]
 ssh_open = ["assets/*"]
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
