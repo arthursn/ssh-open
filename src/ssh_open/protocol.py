@@ -2,7 +2,6 @@ import json
 from dataclasses import asdict, dataclass
 
 PROTOCOL_VERSION = 1
-DEFAULT_PORT = 9999
 ENCODING = "utf-8"
 MESSAGE_TERMINATOR = b"\n"
 

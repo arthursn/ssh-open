@@ -1,9 +1,11 @@
 import argparse
 import asyncio
+import contextlib
 import importlib.resources
 import logging
-import socket
+import shlex
 import subprocess
+import uuid
 from pathlib import Path
 
 import tomli
@@ -19,9 +21,10 @@ REMOTE_SSH_OPEN_DIR = "~/.ssh-open"
 REMOTE_SSH_OPEN_DIR_SH = "$HOME/.ssh-open"
 REMOTE_BROWSER_PATH = f"{REMOTE_SSH_OPEN_DIR}/browser"
 REMOTE_ENV_PATH_SH = f"{REMOTE_SSH_OPEN_DIR_SH}/env"
+REMOTE_SOCK_SUBDIR = "sock"
 
 DEFAULT_TIMEOUT_SEC = 30
-DEFAULT_LISTENER_PORT = 9999
+DEFAULT_LISTENER_PORT = 0  # 0 = let the OS pick a free port
 DEFAULT_PUSH = True
 
 
@@ -34,28 +37,37 @@ def load_config() -> dict:
     return {}
 
 
-def is_listener_running(port: int = DEFAULT_LISTENER_PORT) -> bool:
-    """Check if the listener is already running by attempting a connection."""
-    try:
-        with socket.create_connection(("127.0.0.1", port), timeout=1):
-            return True
-    except OSError:
-        return False
-
-
 def get_asset(name: str) -> Path:
     """Resolve the path to a bundled asset."""
     return importlib.resources.files("ssh_open.assets").joinpath(name)  # ty: ignore[invalid-return-type]
 
 
+def prepare_remote_dir(ssh_host: str, ssh_args: list[str]) -> str:
+    """Create the remote ssh-open dirs and return the remote $HOME."""
+    result = subprocess.run(
+        [
+            "ssh",
+            *ssh_args,
+            ssh_host,
+            (
+                f"mkdir -p {REMOTE_SSH_OPEN_DIR}/{REMOTE_SOCK_SUBDIR} && "
+                f"chmod 700 {REMOTE_SSH_OPEN_DIR} && "
+                'printf %s "$HOME"'
+            ),
+        ],
+        check=True,
+        stdout=subprocess.PIPE,
+        text=True,
+    )
+    home = result.stdout.strip()
+    if not home.startswith("/"):
+        raise RuntimeError(f"Could not resolve remote home directory (got {home!r})")
+    return home
+
+
 def push_assets(ssh_host: str, ssh_args: list[str]) -> None:
     """Copy the browser and env scripts to the remote host."""
     log.info(f"Pushing assets to {ssh_host}:{REMOTE_SSH_OPEN_DIR}")
-
-    subprocess.run(
-        ["ssh", *ssh_args, ssh_host, f"mkdir -p {REMOTE_SSH_OPEN_DIR}"],
-        check=True,
-    )
 
     for asset_name, remote_path in [
         ("browser", f"{REMOTE_SSH_OPEN_DIR}/browser"),
@@ -79,10 +91,12 @@ def push_assets(ssh_host: str, ssh_args: list[str]) -> None:
 def build_ssh_command(
     ssh_host: str,
     extra_args: list[str],
-    port: int = DEFAULT_LISTENER_PORT,
+    host_port: int,
+    remote_sock: str,
 ) -> list[str]:
     """Build the SSH command with reverse tunnel and shell-agnostic env setup."""
     bootstrap = (
+        f"export SSH_OPEN_SOCK={shlex.quote(remote_sock)}; "
         'REAL_SHELL=$(getent passwd "$USER" | cut -d: -f7 | xargs basename); '
         'case "$REAL_SHELL" in '
         "bash) "
@@ -103,7 +117,7 @@ def build_ssh_command(
         "ssh",
         "-t",
         "-R",
-        f"{port}:localhost:{port}",
+        f"{remote_sock}:localhost:{host_port}",
         *extra_args,
         ssh_host,
         bootstrap,
@@ -113,9 +127,9 @@ def build_ssh_command(
 async def run(
     ssh_host: str,
     ssh_extra: list[str],
-    port: int = DEFAULT_LISTENER_PORT,
-    timeout: int = DEFAULT_TIMEOUT_SEC,
-    push: bool = True,
+    port: int,
+    timeout: int,
+    push: bool,
 ) -> None:
     logging.basicConfig(
         level=logging.INFO,
@@ -123,24 +137,41 @@ async def run(
     )
 
     listener = Listener(host=ssh_host, port=port, timeout=timeout)
+    await listener.start()
+    serve_task = asyncio.create_task(listener.serve())
 
-    if not is_listener_running(port=port):
-        asyncio.create_task(listener.run())
-        for _ in range(10):
-            await asyncio.sleep(0.3)
-            if is_listener_running():
-                log.info("Listener is up.")
-                break
-        else:
-            log.warning("Listener may not have started in time.")
+    remote_home = prepare_remote_dir(ssh_host, ssh_extra)
+    session_id = uuid.uuid4().hex[:12]
+    remote_sock = f"{remote_home}/.ssh-open/{REMOTE_SOCK_SUBDIR}/{session_id}.sock"
 
     if push:
         push_assets(ssh_host, ssh_extra)
-    cmd = build_ssh_command(ssh_host, ssh_extra, port=port)
-    log.info(f"Connecting to {ssh_host}...")
+    cmd = build_ssh_command(
+        ssh_host, ssh_extra, host_port=listener.port, remote_sock=remote_sock
+    )
+    log.info(
+        f"Connecting to {ssh_host} (listener port {listener.port}, socket {remote_sock})..."
+    )
 
-    proc = await asyncio.create_subprocess_exec(*cmd)
-    await proc.wait()
+    try:
+        proc = await asyncio.create_subprocess_exec(*cmd)
+        await proc.wait()
+    finally:
+        # sshd does not unlink streamlocal sockets on exit; clean up best-effort.
+        with contextlib.suppress(Exception):
+            cleanup = await asyncio.create_subprocess_exec(
+                "ssh",
+                *ssh_extra,
+                ssh_host,
+                f"rm -f {shlex.quote(remote_sock)}",
+                stdin=asyncio.subprocess.DEVNULL,
+                stdout=asyncio.subprocess.DEVNULL,
+                stderr=asyncio.subprocess.DEVNULL,
+            )
+            await asyncio.wait_for(cleanup.wait(), timeout=10)
+        serve_task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await serve_task
 
 
 def main() -> None:
@@ -155,7 +186,7 @@ def main() -> None:
         "--port",
         type=int,
         default=(default := config.get("port", DEFAULT_LISTENER_PORT)),
-        help=f"Listener port (default: {default})",
+        help=f"Host listener port, 0 = pick a free port (default: {default})",
     )
     parser.add_argument(
         "--timeout",

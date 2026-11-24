@@ -1,10 +1,11 @@
 import asyncio
+import contextlib
 import logging
 import subprocess
 import sys
 from urllib.parse import parse_qs, urlparse
 
-from .protocol import DEFAULT_PORT, OpenRequest, OpenResponse
+from .protocol import OpenRequest, OpenResponse
 
 logging.basicConfig(
     level=logging.INFO,
@@ -27,8 +28,9 @@ def extract_localhost_ports(url: str) -> list[int]:
             for values in parse_qs(parsed.query).values():
                 for value in values:
                     check_url(value)
-        except Exception:
-            pass
+        except ValueError:
+            # Malformed URL (e.g. invalid port); nothing to extract from it.
+            return
 
     check_url(url)
     return list(ports)
@@ -76,10 +78,9 @@ class TunnelManager:
         except TimeoutError:
             log.info(f"Tunnel timeout reached for port {port}, closing.")
         finally:
-            try:
+            # Process may have already exited.
+            with contextlib.suppress(ProcessLookupError):
                 proc.terminate()
-            except Exception:
-                pass
             self._tunnels.pop(port, None)
             log.info(f"Tunnel for port {port} closed.")
 
@@ -88,7 +89,7 @@ class Listener:
     def __init__(
         self,
         host: str,
-        port: int = DEFAULT_PORT,
+        port: int = 0,  # 0 = let the OS pick a free port
         timeout: int = 30,
     ):
         self.host: str = host
@@ -124,7 +125,7 @@ class Listener:
             await writer.drain()
 
         except Exception as e:
-            log.error(f"Error handling request: {e}")
+            log.exception("Error handling request")
             response = OpenResponse(success=False, forwarded_ports=[], error=str(e))
             writer.write(response.serialize())
             await writer.drain()
@@ -132,13 +133,21 @@ class Listener:
             writer.close()
             await writer.wait_closed()
 
-    async def run(self) -> None:
-        server = await asyncio.start_server(
+    async def start(self) -> None:
+        """Bind the server socket. If port is 0, the OS picks a free port."""
+        self._server = await asyncio.start_server(
             self.handle_client,
             host="127.0.0.1",
             port=self.port,
         )
-        addrs = ", ".join(str(s.getsockname()) for s in server.sockets)
+        self.port = self._server.sockets[0].getsockname()[1]
+        addrs = ", ".join(str(s.getsockname()) for s in self._server.sockets)
         log.info(f"Listening on {addrs}")
-        async with server:
-            await server.serve_forever()
+
+    async def serve(self) -> None:
+        async with self._server:
+            await self._server.serve_forever()
+
+    async def run(self) -> None:
+        await self.start()
+        await self.serve()

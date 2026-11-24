@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 # Sent to remote by ssh_wrapper. Opens URLs on the host via the ssh-open listener.
+# SSH_OPEN_SOCK is set per session by ssh-open and points to a Unix socket that
+# is reverse-forwarded to that session's host listener.
 
 URL="$1"
 
@@ -8,4 +10,15 @@ if [ -z "$URL" ]; then
     exit 1
 fi
 
-echo "{\"url\": \"$URL\", \"version\": 1}" | nc -q1 localhost 9999
+if [ -z "$SSH_OPEN_SOCK" ]; then
+    echo "browser: SSH_OPEN_SOCK is not set (not inside an ssh-open session?)" >&2
+    exit 1
+fi
+
+if [ ! -S "$SSH_OPEN_SOCK" ]; then
+    echo "browser: socket $SSH_OPEN_SOCK not found (stale session, e.g. reattached tmux?)" >&2
+    exit 1
+fi
+
+# The listener replies and closes the connection, so nc exits on its own.
+printf '%s\n' "{\"url\": \"$URL\", \"version\": 1}" | nc -U "$SSH_OPEN_SOCK"
