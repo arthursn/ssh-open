@@ -6,6 +6,7 @@ import logging
 import shlex
 import subprocess
 import uuid
+from importlib.resources.abc import Traversable
 from pathlib import Path
 
 import tomli
@@ -36,9 +37,9 @@ def load_config() -> dict:
     return {}
 
 
-def get_asset(name: str) -> Path:
+def get_asset(name: str) -> Traversable:
     """Resolve the path to a bundled asset."""
-    return importlib.resources.files("ssh_open.assets").joinpath(name)  # ty: ignore[invalid-return-type]
+    return importlib.resources.files("ssh_open.assets").joinpath(name)
 
 
 def prepare_remote_dir(ssh_host: str, ssh_args: list[str]) -> str:
@@ -72,7 +73,7 @@ def push_assets(ssh_host: str, ssh_args: list[str]) -> None:
         ("browser", f"{REMOTE_SSH_OPEN_DIR}/browser"),
         ("env", f"{REMOTE_SSH_OPEN_DIR}/env"),
     ]:
-        with open(get_asset(asset_name), "rb") as f:
+        with get_asset(asset_name).open("rb") as f:
             subprocess.run(
                 ["ssh", *ssh_args, ssh_host, f"cat > {remote_path}"],
                 stdin=f,
