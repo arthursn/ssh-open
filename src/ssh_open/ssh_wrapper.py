@@ -25,7 +25,6 @@ REMOTE_SOCK_SUBDIR = "sock"
 
 DEFAULT_TIMEOUT_SEC = 30
 DEFAULT_LISTENER_PORT = 0  # 0 = let the OS pick a free port
-DEFAULT_PUSH = True
 
 
 def load_config() -> dict:
@@ -129,7 +128,6 @@ async def run(
     ssh_extra: list[str],
     port: int,
     timeout: int,
-    push: bool,
 ) -> None:
     logging.basicConfig(
         level=logging.INFO,
@@ -144,8 +142,8 @@ async def run(
     session_id = uuid.uuid4().hex[:12]
     remote_sock = f"{remote_home}/.ssh-open/{REMOTE_SOCK_SUBDIR}/{session_id}.sock"
 
-    if push:
-        push_assets(ssh_host, ssh_extra)
+    # Always push: the browser script must match this version's protocol.
+    push_assets(ssh_host, ssh_extra)
     cmd = build_ssh_command(
         ssh_host, ssh_extra, host_port=listener.port, remote_sock=remote_sock
     )
@@ -194,12 +192,6 @@ def main() -> None:
         default=(default := config.get("timeout", DEFAULT_TIMEOUT_SEC)),
         help=f"Tunnel idle timeout in seconds (default: {default})",
     )
-    parser.add_argument(
-        "--push",
-        action=argparse.BooleanOptionalAction,
-        default=(default := config.get("push", DEFAULT_PUSH)),
-        help=f"Push assets to the remote host (default: {default})",
-    )
     our_args, ssh_extra = parser.parse_known_args()
 
     asyncio.run(
@@ -208,6 +200,5 @@ def main() -> None:
             ssh_extra,
             port=our_args.port,
             timeout=our_args.timeout,
-            push=our_args.push,
         )
     )
