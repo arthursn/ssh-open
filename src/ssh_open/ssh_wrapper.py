@@ -21,6 +21,7 @@ REMOTE_SSH_OPEN_DIR = "~/.ssh-open"
 # used in bootstrap (expanded by remote shell)
 REMOTE_SSH_OPEN_DIR_SH = "$HOME/.ssh-open"
 REMOTE_BROWSER_PATH = f"{REMOTE_SSH_OPEN_DIR}/browser"
+REMOTE_FIND_SOCK_PATH = f"{REMOTE_SSH_OPEN_DIR}/find-sock"
 REMOTE_ENV_PATH_SH = f"{REMOTE_SSH_OPEN_DIR_SH}/env"
 REMOTE_SOCK_SUBDIR = "sock"
 
@@ -66,12 +67,13 @@ def prepare_remote_dir(ssh_host: str, ssh_args: list[str]) -> str:
 
 
 def push_assets(ssh_host: str, ssh_args: list[str]) -> None:
-    """Copy the browser and env scripts to the remote host."""
+    """Copy the browser, env and find-sock scripts to the remote host."""
     log.info(f"Pushing assets to {ssh_host}:{REMOTE_SSH_OPEN_DIR}")
 
     for asset_name, remote_path in [
         ("browser", f"{REMOTE_SSH_OPEN_DIR}/browser"),
         ("env", f"{REMOTE_SSH_OPEN_DIR}/env"),
+        ("find-sock", REMOTE_FIND_SOCK_PATH),
     ]:
         with get_asset(asset_name).open("rb") as f:
             subprocess.run(
@@ -82,7 +84,7 @@ def push_assets(ssh_host: str, ssh_args: list[str]) -> None:
         log.info(f"Transferred asset '{asset_name}' to {ssh_host}:{remote_path}")
 
     subprocess.run(
-        ["ssh", *ssh_args, ssh_host, f"chmod +x {REMOTE_BROWSER_PATH}"],
+        ["ssh", *ssh_args, ssh_host, f"chmod +x {REMOTE_BROWSER_PATH} {REMOTE_FIND_SOCK_PATH}"],
         check=True,
     )
     log.info("Assets successfully pushed and permissions set.")

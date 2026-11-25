@@ -5,7 +5,7 @@ import subprocess
 import sys
 from urllib.parse import parse_qs, urlparse
 
-from .protocol import OpenRequest, OpenResponse
+from .protocol import OpenResponse, PingRequest, deserialize_request
 
 logging.basicConfig(
     level=logging.INFO,
@@ -109,7 +109,13 @@ class Listener:
             if not raw:
                 return
 
-            request = OpenRequest.deserialize(raw)
+            request = deserialize_request(raw)
+            if isinstance(request, PingRequest):
+                log.debug("Received ping")
+                writer.write(OpenResponse(success=True, forwarded_ports=[]).serialize())
+                await writer.drain()
+                return
+
             log.info(f"Received URL: {request.url}")
 
             ports = extract_localhost_ports(request.url)

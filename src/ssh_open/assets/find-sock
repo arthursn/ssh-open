@@ -1,0 +1,32 @@
+#!/bin/sh
+# Sent to remote by ssh_wrapper. Prints the path of a live ssh-open socket:
+# $SSH_OPEN_SOCK if its session is still alive, otherwise the most recently
+# created live socket under ~/.ssh-open/sock. Exits 1 if none is alive.
+#
+# A socket file can outlive its session (sshd does not unlink it), so liveness
+# is checked by pinging the host listener through it.
+
+SOCK_DIR="$HOME/.ssh-open/sock"
+
+alive() {
+    [ -S "$1" ] || return 1
+    printf '%s\n' '{"ping": true, "version": 1}' \
+        | nc -U "$1" 2>/dev/null \
+        | grep -q '"success": true'
+}
+
+if [ -n "$SSH_OPEN_SOCK" ] && alive "$SSH_OPEN_SOCK"; then
+    printf '%s\n' "$SSH_OPEN_SOCK"
+    exit 0
+fi
+
+# Session ids are hex, so parsing ls output is safe here. Newest first.
+for name in $(ls -t "$SOCK_DIR" 2>/dev/null); do
+    sock="$SOCK_DIR/$name"
+    if [ "$sock" != "$SSH_OPEN_SOCK" ] && alive "$sock"; then
+        printf '%s\n' "$sock"
+        exit 0
+    fi
+done
+
+exit 1

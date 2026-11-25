@@ -8,5 +8,5 @@
 
 # These files are checked out using LF locally
 src/ssh_open/assets/browser eol=lf
-src/ssh_open/assets/gcm_wrapper eol=lf
 src/ssh_open/assets/env eol=lf
+src/ssh_open/assets/find-sock eol=lf

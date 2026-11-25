@@ -23,6 +23,25 @@ class OpenRequest:
 
 
 @dataclass
+class PingRequest:
+    """Liveness probe: lets the remote tell a live socket from a stale one."""
+
+    ping: bool = True
+    version: int = PROTOCOL_VERSION
+
+    def serialize(self) -> bytes:
+        return (json.dumps(asdict(self)) + "\n").encode(ENCODING)
+
+
+def deserialize_request(data: bytes) -> "OpenRequest | PingRequest":
+    """Decode any request sent by the remote."""
+    obj = json.loads(data.decode(ENCODING).strip())
+    if obj.get("ping"):
+        return PingRequest(version=obj.get("version", PROTOCOL_VERSION))
+    return OpenRequest.deserialize(data)
+
+
+@dataclass
 class OpenResponse:
     success: bool
     forwarded_ports: list[int]

@@ -4,7 +4,7 @@ import pytest
 
 from ssh_open import listener as listener_module
 from ssh_open.listener import Listener, extract_localhost_ports
-from ssh_open.protocol import OpenRequest, OpenResponse
+from ssh_open.protocol import OpenRequest, OpenResponse, PingRequest
 
 
 @pytest.mark.parametrize(
@@ -66,4 +66,13 @@ def test_listener_rejects_garbage(opened):
 
     assert response.success is False
     assert response.error
+    assert opened == []
+
+
+def test_listener_answers_ping(opened):
+    _, response = asyncio.run(_roundtrip(PingRequest().serialize()))
+
+    # find-sock greps for this exact substring.
+    assert b'"success": true' in response.serialize()
+    assert response.success is True
     assert opened == []
