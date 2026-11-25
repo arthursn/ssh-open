@@ -3,3 +3,17 @@ export VSCODE_IPC_HOOK_CLI=1
 unset DISPLAY 2>/dev/null || true
 unset WAYLAND_DISPLAY 2>/dev/null || true
 unset SSH_TTY 2>/dev/null || true
+
+# Point SSH_OPEN_SOCK at a live ssh-open session. Run this in shells that
+# outlived their session (e.g. a reattached tmux pane).
+ssh_open_refresh() {
+    _ssh_open_sock=$("$HOME/.ssh-open/find-sock") || {
+        unset _ssh_open_sock
+        echo "ssh-open: no live session found (connect with ssho first)" >&2
+        return 1
+    }
+    export SSH_OPEN_SOCK="$_ssh_open_sock"
+    unset _ssh_open_sock
+}
+
+ssh_open_refresh || true

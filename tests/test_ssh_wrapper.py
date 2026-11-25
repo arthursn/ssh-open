@@ -3,7 +3,7 @@ import pytest
 from ssh_open.ssh_wrapper import build_ssh_command, get_asset
 
 
-@pytest.mark.parametrize("name", ["browser", "env"])
+@pytest.mark.parametrize("name", ["browser", "env", "find-sock"])
 def test_asset_is_readable_with_lf_endings(name):
     with get_asset(name).open("rb") as f:
         content = f.read()
